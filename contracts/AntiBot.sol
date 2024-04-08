@@ -14,6 +14,7 @@ contract AntiBot is AccessControl {
     mapping(bytes => uint256) private transactions;
 
     event AntibotUpdated(bool isAntibotEnabled);
+    event AntiBotDepthUpdated(uint256 newDepth);
 
     modifier transactionThrottler(
         address from,
@@ -51,7 +52,7 @@ contract AntiBot is AccessControl {
 
     function setAntiBotDepth(uint256 depth) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(depth <= 10, "Antibot: value cannot be bigger than 10");
-
         antiBotDepth = depth;
+        emit AntiBotDepthUpdated(depth);
     }
 }

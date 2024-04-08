@@ -14,7 +14,10 @@ import "./AntiBot.sol";
  */
 contract RumToken is ERC20, ERC20Burnable, ERC20Permit, ERC165, AccessControl, AntiBot {    
     bytes32 public constant SUPERVISED_TRANSFER_FROM_ROLE = keccak256("SUPERVISED_TRANSFER_FROM_ROLE");
-    bool public transferFromSupervisionEnabled = true;    
+    bool public transferFromSupervisionEnabled = true;
+
+    event TransferFromSupervisionDisabled();
+    event SupervisedTransferFromRoleAdded(address account);
 
     modifier onlyAdmin() {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "RumToken: Caller is not an admin");
@@ -37,10 +40,12 @@ contract RumToken is ERC20, ERC20Burnable, ERC20Permit, ERC165, AccessControl, A
     function disableTransferFromSupervision() public onlyAdmin {
         require(transferFromSupervisionEnabled, "RumToken: Transfer supervision is already disabled");
         transferFromSupervisionEnabled = false;
+        emit TransferFromSupervisionDisabled();
     }
 
     function addSupervisedTransferFromRole(address account) public onlyAdmin {
         grantRole(SUPERVISED_TRANSFER_FROM_ROLE, account);
+        emit SupervisedTransferFromRoleAdded(account);
     }
 
     function transfer(address recipient, uint256 amount) 
