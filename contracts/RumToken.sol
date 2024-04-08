@@ -27,7 +27,6 @@ contract RumToken is ERC20, ERC20Burnable, ERC20Permit, ERC165, AccessControl, A
     }
 
     constructor() ERC20("RUM Pirates of The Arrland Token", "RUM") ERC20Permit("RumToken") AntiBot() {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _mint(msg.sender, 2_000_000_000 * 10 ** 18);        
     }
 
