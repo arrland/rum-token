@@ -21,17 +21,19 @@ contract AntiBot is AccessControl {
         uint256 amount
     ) {        
         if (isAntibotEnabled && amount > 0) {
-            bytes memory key = abi.encodePacked(from, to);
+            bytes memory keyFromTo = abi.encodePacked(from, to);
+            bytes memory keyToFrom = abi.encodePacked(to, from);
 
             bool skippable = hasRole(BOT_ROLE, from) || hasRole(BOT_ROLE, to);
             
             require(
                 skippable ||
-                    (transactions[key] < block.number - antiBotDepth && transactions[abi.encodePacked(to, from)] < block.number - antiBotDepth),
+                    (transactions[keyFromTo] < block.number - antiBotDepth && transactions[keyToFrom] < block.number - antiBotDepth),
                 "Antibot: Transaction throttled"
             );
 
-            transactions[key] = block.number;            
+            transactions[keyFromTo] = block.number;
+            transactions[keyToFrom] = block.number;            
         }
 
         _;
