@@ -4,7 +4,6 @@ const { ethers } = require("hardhat");
 
 
 const hre = require("hardhat");
-const { constants } = require('@openzeppelin/test-helpers');
 const { expect } = chai;
 
 
@@ -15,13 +14,13 @@ describe("RumToken", function () {
   let addr1;
   let addr2;
   let addrs;
+  let multisigWallet;
 
   beforeEach(async function () {
     // Get the ContractFactory and Signers here.
     RumToken = await hre.ethers.getContractFactory("RumToken");
-    [owner, addr1, addr2, ...addrs] = await hre.ethers.getSigners();
-
-    rumToken = await RumToken.deploy();
+    [owner, addr1, addr2, multisigWallet, ...addrs] = await hre.ethers.getSigners();
+    rumToken = await RumToken.deploy(multisigWallet.address);
   });
 
   describe("Deployment", function () {
@@ -30,48 +29,50 @@ describe("RumToken", function () {
         expect(await rumToken.hasRole(DEFAULT_ADMIN_ROLE, owner.address)).to.be.true;
     });
 
-    it("Should assign the total supply of tokens to the owner", async function () {
-      const ownerBalance = await rumToken.balanceOf(owner.address);
-      expect(await rumToken.totalSupply()).to.equal(ownerBalance);
+    it("Should assign the total supply of tokens to the multisig wallet", async function () {
+      const multisigWalletBalance = await rumToken.balanceOf(multisigWallet.address);
+      expect(await rumToken.totalSupply()).to.equal(multisigWalletBalance);
     });
   });
 
   describe("Transactions", function () {
     it("Should transfer tokens between accounts", async function () {
-      // Transfer 50 tokens from owner to addr1
-      await rumToken.transfer(addr1.address, hre.ethers.parseEther("50"));
+      // Transfer 50 tokens from multisig wallet to addr1
+      await rumToken.connect(multisigWallet).transfer(addr1.address, hre.ethers.parseEther("50"));
       const addr1Balance = await rumToken.balanceOf(addr1.address);
       expect(addr1Balance).to.equal(hre.ethers.parseEther("50"));
     });
 
     it("Should fail if sender doesn’t have enough tokens", async function () {
-      const initialOwnerBalance = await rumToken.balanceOf(owner.address);
+      const initialMultisigWalletBalance = await rumToken.balanceOf(multisigWallet.address);
 
-      // Try to send 1 token from addr1 (0 tokens) to owner (1000000 tokens).
+      // Try to send 1 token from addr1 (0 tokens) to multisig wallet.
       // `require` will evaluate false and revert the transaction.
       await expect(
-        rumToken.connect(addr1).transfer(owner.address, hre.ethers.parseEther("1"))
+        rumToken.connect(addr1).transfer(multisigWallet.address, hre.ethers.parseEther("1"))
       ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
 
-      // Owner balance shouldn't have changed.
-      expect(await rumToken.balanceOf(owner.address)).to.equal(initialOwnerBalance);
+      // Multisig wallet balance shouldn't have changed.
+      expect(await rumToken.balanceOf(multisigWallet.address)).to.equal(initialMultisigWalletBalance);
     });
 
     it("Cannot transfer to the zero address", async function () {
       await expect(
-        rumToken.transfer(constants.ZERO_ADDRESS, hre.ethers.parseEther("100"), { from: owner.address })
+        rumToken.connect(multisigWallet).transfer(ethers.ZeroAddress, hre.ethers.parseEther("100"))
       ).to.be.revertedWith("ERC20: transfer to the zero address");
     });
   });
 
   describe("Burning", function () {
     it("Should burn tokens correctly", async function () {
+      await rumToken.connect(multisigWallet).transfer(owner.address, hre.ethers.parseEther("100"));
       const initialOwnerBalance = await rumToken.balanceOf(owner.address);      
       await rumToken.burn(BigInt(ethers.parseEther("100").toString()));      
       const finalOwnerBalance = await rumToken.balanceOf(owner.address);      
       expect(BigInt(finalOwnerBalance.toString())).to.equal(initialOwnerBalance - BigInt(ethers.parseEther("100").toString()));
     });
     it("Allows a third party to burn owner's tokens when approved", async function () {
+      await rumToken.connect(multisigWallet).transfer(owner.address, hre.ethers.parseEther("50"));
       const initialOwnerBalance = await rumToken.balanceOf(owner.address);
       const burnAmount = BigInt(ethers.parseEther("50").toString());
   
@@ -108,13 +109,15 @@ describe("RumToken", function () {
 
 describe("RumToken Supervised Transfer From", function () {
     let RumToken, rumToken;
-    let owner, addr1, addr2, addrs;
+    let owner, addr1, addr2, multisigWallet, addrs;
 
     beforeEach(async function () {
         // Deploy RumToken contract
         RumToken = await ethers.getContractFactory("RumToken");
-        [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
-        rumToken = await RumToken.deploy();
+        [owner, addr1, addr2, multisigWallet, ...addrs] = await ethers.getSigners();
+        rumToken = await RumToken.deploy(multisigWallet.address);
+        await rumToken.connect(multisigWallet).transfer(owner.address, hre.ethers.parseEther("200"));
+
     });
 
     it("Should start with transferFrom supervision enabled", async function () {
@@ -205,13 +208,14 @@ describe("RumToken Supervised Transfer From", function () {
 
 describe("RumToken AntiBot Integration", function () {
     let RumToken, rumToken;
-    let owner, addr1, addr2, addrs;
+    let owner, addr1, addr2, multisigWallet, addrs;
 
     beforeEach(async function () {
         // Deploy RumToken contract with AntiBot functionality
         RumToken = await ethers.getContractFactory("RumToken");
-        [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
-        rumToken = await RumToken.deploy();
+        [owner, addr1, addr2, multisigWallet, ...addrs] = await ethers.getSigners();      
+        rumToken = await RumToken.deploy(multisigWallet.address);        
+        await rumToken.connect(multisigWallet).transfer(owner.address, hre.ethers.parseEther("300"));
     });
 
     it("Allows admin to add BOT_ROLE to an account", async function () {

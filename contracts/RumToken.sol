@@ -29,8 +29,9 @@ contract RumToken is ERC20, ERC20Burnable, ERC20Permit, ERC165, AccessControl, A
         _;
     }
 
-    constructor() ERC20("RUM Pirates of The Arrland Token", "RUM") ERC20Permit("RumToken") AntiBot() {
-        _mint(msg.sender, 2_000_000_000 * 10 ** 18);        
+    constructor(address _multisigWallet) ERC20("RUM Pirates of The Arrland Token", "RUM") ERC20Permit("RumToken") AntiBot() {
+        require(_multisigWallet != address(0), "RumToken: Multisig wallet address cannot be the zero address");
+        _mint(_multisigWallet, 2_000_000_000 * 10 ** 18);        
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, AccessControl) returns (bool) {

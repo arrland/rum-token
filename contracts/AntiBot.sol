@@ -9,7 +9,7 @@ contract AntiBot is AccessControl {
 
     bool public isAntibotEnabled = true;
 
-    uint256 public antiBotDepth = 3;
+    uint256 public antiBotDepth = 1;
 
     mapping(bytes => uint256) private transactions;
 
